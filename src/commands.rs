@@ -1,6 +1,5 @@
 use serenity::prelude::*;
 use serenity::model::channel::Message;
-
 use crate::config::{ConfigMap, ServerConfig};
 
 pub async fn handle_command(ctx: &Context, msg: &Message, command: &str, args: Vec<String>) {
@@ -44,18 +43,16 @@ async fn prefix(ctx: &Context, msg: &Message, args: Vec<String>) {
     let config_map = data.get::<ConfigMap>().expect("ConfigMap not found"); 
 
     if args.is_empty() {
-        let configs = config_map.read().await;
-        let current_prefix = configs.get(&guild_id)
-            .map(|c| c.prefix.as_str())
-            .unwrap_or("!");
+        let current_prefix = config_map.get(&guild_id)
+            .map(|entry| entry.prefix.clone())
+            .unwrap_or_else(|| "!".to_string());
 
-       let response = format!("Current prefix: {}", current_prefix);
-       let _ = msg.channel_id.say(&ctx.http, response).await;
-       return;
+        let response = format!("Current prefix: {}", current_prefix);
+        let _ = msg.channel_id.say(&ctx.http, response).await;
+        return;
     }
 
-    let mut configs = config_map.write().await;
-    configs.insert(guild_id, ServerConfig {
+    config_map.insert(guild_id, ServerConfig {
         prefix: args[0].clone(),
     });
 

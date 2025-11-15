@@ -1,8 +1,8 @@
-use std::env;
 use serenity::async_trait;
 use serenity::prelude::*;
 use serenity::model::gateway::Ready;
 use serenity::model::channel::Message;
+use std::env;
 
 mod commands;
 mod config;
@@ -23,10 +23,9 @@ impl EventHandler for Handler {
             return;
         }
 
-        let prefix = get_prefix(
-            &ctx.data.read().await.get::<ConfigMap>().expect("ConfigMap not found"), 
-            msg.guild_id
-            ).await;
+        let data = ctx.data.read().await;
+        let config_map = data.get::<ConfigMap>().expect("ConfigMap not found"); 
+        let prefix = get_prefix(config_map, msg.guild_id); 
 
         if !msg.content.starts_with(&prefix) {
             return;
@@ -40,7 +39,7 @@ impl EventHandler for Handler {
         }
 
         let command = parsed.remove(0);
-        let args: Vec<String> = parsed;
+        let args = parsed;
         commands::handle_command(&ctx, &msg, &command, args).await;
     }
 }
@@ -52,7 +51,9 @@ async fn main() {
     let token = env::var("DISCORD_TOKEN")
         .expect("Missing DISCORD_TOKEN in environment");
 
-    let intents = GatewayIntents::GUILD_MESSAGES | GatewayIntents::MESSAGE_CONTENT;
+    let intents = GatewayIntents::GUILD_MESSAGES 
+        | GatewayIntents::MESSAGE_CONTENT
+        | GatewayIntents::GUILDS;
 
     let mut client = Client::builder(token, intents)
         .event_handler(Handler)

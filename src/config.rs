@@ -1,8 +1,7 @@
 use serenity::model::id::GuildId;
 use serenity::prelude::TypeMapKey;
-use std::collections::HashMap;
+use dashmap::DashMap;
 use std::sync::Arc;
-use tokio::sync::RwLock;
 
 #[derive(Clone)]
 pub struct ServerConfig {
@@ -20,21 +19,20 @@ impl Default for ServerConfig {
 pub struct ConfigMap;
 
 impl TypeMapKey for ConfigMap {
-    type Value = Arc<RwLock<HashMap<GuildId, ServerConfig>>>;
+    type Value = Arc<DashMap<GuildId, ServerConfig>>;
 }
 
-pub fn create_config_map() -> Arc<RwLock<HashMap<GuildId, ServerConfig>>> {
-    Arc::new(RwLock::new(HashMap::new()))
+pub fn create_config_map() -> Arc<DashMap<GuildId, ServerConfig>> {
+    Arc::new(DashMap::new())
 }
 
-pub async fn get_prefix(config_map: &Arc<RwLock<HashMap<GuildId, ServerConfig>>>, guild_id: Option<GuildId>) -> String {
+pub fn get_prefix(config_map: &Arc<DashMap<GuildId, ServerConfig>>, guild_id: Option<GuildId>) -> String {
     let guild_id = match guild_id {
         Some(id) => id,
         None => return "!".to_string(),
     };
 
-    let configs = config_map.read().await;
-    configs.get(&guild_id)
-        .map(|c| c.prefix.clone())
+    config_map.get(&guild_id)
+        .map(|entry| entry.prefix.clone())
         .unwrap_or_else(|| "!".to_string())
 }
