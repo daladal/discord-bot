@@ -3,7 +3,7 @@ use serenity::model::channel::Message;
 
 use crate::config::{ConfigMap, ServerConfig};
 
-pub async fn handle_command(ctx: &Context, msg: &Message, command: &str, args: Vec<&str>) {
+pub async fn handle_command(ctx: &Context, msg: &Message, command: &str, args: Vec<String>) {
     match command {
         "ping" => ping(ctx, msg).await,
         "help" => help(ctx, msg).await,
@@ -19,14 +19,19 @@ async fn ping(ctx: &Context, msg: &Message) {
 }
 
 async fn help(ctx: &Context, msg: &Message) {
-    let help_text = "Available commands:\n!ping - Responds with Pong!\n!help - Shows this message";
+    let help_text = "Available commands:\n\
+        ping - Responds with Pong!\n\
+        help - Shows this message\n\
+        prefix [new_prefix] - View or set command prefix for this server\n\
+        \n\
+        Tip: Use quotes for multi-word arguments: `!command \"multi word arg\"`";
 
     if let Err(why) = msg.channel_id.say(&ctx.http, help_text).await {
         println!("Error sending message: {:?}", why);
     }
 }
 
-async fn prefix(ctx: &Context, msg: &Message, args: Vec<&str>) {
+async fn prefix(ctx: &Context, msg: &Message, args: Vec<String>) {
     let guild_id = match msg.guild_id {
         Some(id) => id,
         None => {
@@ -49,12 +54,11 @@ async fn prefix(ctx: &Context, msg: &Message, args: Vec<&str>) {
        return;
     }
 
-    let new_prefix = args[0];
     let mut configs = config_map.write().await;
     configs.insert(guild_id, ServerConfig {
-        prefix: new_prefix.to_string(),
+        prefix: args[0].clone(),
     });
 
-    let response = format!("Prefix changed to: {}", new_prefix);
+    let response = format!("Prefix changed to: {}", args[0]);
     let _ = msg.channel_id.say(&ctx.http, response).await;
 }

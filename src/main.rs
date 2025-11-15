@@ -32,14 +32,16 @@ impl EventHandler for Handler {
             return;
         }
 
-        let mut parts = msg.content[prefix.len()..].split_whitespace();
-        let command = match parts.next() {
-            Some(cmd) => cmd,
-            None => return,
-        };
-        let args: Vec<&str> = parts.collect();
+        let content_without_prefix = &msg.content[prefix.len()..];
+        let mut parsed = utils::parse_args(content_without_prefix);
 
-        commands::handle_command(&ctx, &msg, command, args).await;
+        if parsed.is_empty() {
+            return;
+        }
+
+        let command = parsed.remove(0);
+        let args: Vec<String> = parsed;
+        commands::handle_command(&ctx, &msg, &command, args).await;
     }
 }
 
