@@ -6,6 +6,7 @@ use serenity::model::channel::Message;
 
 mod commands;
 mod config;
+mod utils;
 
 use config::{ConfigMap, create_config_map, get_prefix};
 
