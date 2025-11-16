@@ -16,6 +16,12 @@ impl TypeMapKey for DatabaseContainer {
     type Value = Arc<crate::database::Database>;
 }
 
+pub struct RiotClientContainer;
+
+impl TypeMapKey for RiotClientContainer {
+    type Value = Arc<crate::riot::RiotClient>;
+}
+
 pub fn create_config_map() -> Arc<DashMap<GuildId, ServerConfig>> {
     Arc::new(DashMap::new())
 }

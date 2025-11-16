@@ -16,6 +16,9 @@ mod cache;
 use config::{ConfigMap, DatabaseContainer, create_config_map, get_prefix};
 use user_cache::{UserLinkCache, create_user_cache};
 use database::Database;
+use riot::RiotClient;
+
+use crate::config::RiotClientContainer;
 
 struct Handler;
 
@@ -61,9 +64,14 @@ async fn main() {
     let database_url = env::var("DATABASE_URL")
         .unwrap_or_else(|_| "sqlite:bot.db?mode=rwc".to_string());
 
+    let riot_api_key = env::var("RIOT_API_KEY")
+        .expect("Expected RIOT_API_KEY in environment");
+
     let db = Database::new(&database_url)
         .await
         .expect("Failed to initialize database");
+
+    let riot_client = RiotClient::new(riot_api_key);
 
     let config_map = create_config_map();
     match db.load_all_configs().await {
@@ -94,6 +102,7 @@ async fn main() {
         data.insert::<ConfigMap>(config_map);
         data.insert::<DatabaseContainer>(Arc::new(db));
         data.insert::<UserLinkCache>(user_cache);
+        data.insert::<RiotClientContainer>(Arc::new(riot_client));
     }
 
     if let Err(why) = client.start().await {

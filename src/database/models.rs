@@ -1,4 +1,4 @@
-use serenity::model::id::{GuildId, UserId};
+use serenity::model::id::UserId;
 
 #[derive(Clone, Debug)]
 pub struct ServerConfig {
