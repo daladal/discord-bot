@@ -3,6 +3,7 @@ use serenity::model::channel::Message;
 use crate::config::DatabaseContainer;
 use crate::user_cache::UserLinkCache;
 use crate::database::models::UserLink;
+use crate::cache::{CachedData, ttl};
 
 pub async fn link(ctx: &Context, msg: &Message, args: Vec<String>) {
     if args.len() < 2 {
@@ -48,7 +49,7 @@ pub async fn link(ctx: &Context, msg: &Message, args: Vec<String>) {
         return;
     }
 
-    cache.insert(msg.author.id, user_link);
+    cache.insert(msg.author.id, CachedData::new(user_link));
 
     let response = format!(
         "✅ Linked your account to **{}#{}** in region **{}**",
@@ -97,18 +98,43 @@ pub async fn me(ctx: &Context, msg: &Message) {
     let db = data.get::<DatabaseContainer>().expect("Database not found");
     let cache = data.get::<UserLinkCache>().expect("UserLinkCache not found");
 
-    if let Some(link) = cache.get(&msg.author.id) {
-        let response = format!(
-            "**Your linked account:**\n🎮 **{}#{}**\n🌍 Region: **{}**",
-            link.summoner_name, link.summoner_tag, link.region.to_uppercase()
-        );
-        let _ = msg.channel_id.say(&ctx.http, response).await;
+    if let Some(cached) = cache.get(&msg.author.id) {
+        if cached.is_stale(ttl::USER_LINK) {
+            drop(cached);
+
+            match db.get_user_link(msg.author.id).await {
+                Ok(Some(fresh_link)) => {
+                    cache.insert(msg.author.id, CachedData::new(fresh_link.clone()));
+
+                    let response = format!(
+                        "**Your linked account:**\n🎮 **{}#{}**\n🌍 Region: **{}**",
+                       fresh_link.summoner_name, fresh_link.summoner_tag, fresh_link.region.to_uppercase()
+                    );
+                    let _ = msg.channel_id.say(&ctx.http, response).await;
+                }
+                Ok(None) => {
+                    cache.remove(&msg.author.id);
+                    let _ = msg.channel_id.say(&ctx.http, "You don't have a linked Riot account.\nUse `link <Name#TAG> <region>` to link one.").await;
+
+                } 
+                Err(e) => {
+                    eprintln!("Failed to refresh  user link: {}", e);
+                    let _ = msg.channel_id.say(&ctx.http, "Failed to retrieve your link. Please try again later.").await; 
+                }
+            }
+        } else {
+            let response = format!(
+                "**Your linked account:**\n🎮 **{}#{}**\n🌍 Region: **{}**",
+                cached.data.summoner_name, cached.data.summoner_tag, cached.data.region.to_uppercase()
+            );
+            let _ = msg.channel_id.say(&ctx.http, response).await;
+        }
         return;
     }
 
     match db.get_user_link(msg.author.id).await {
         Ok(Some(link)) => {
-            cache.insert(msg.author.id, link.clone());
+            cache.insert(msg.author.id, CachedData::new(link.clone()));
 
             let response = format!(
                 "**Your linked account:**\n🎮 **{}#{}**\n🌍 Region: **{}**",
