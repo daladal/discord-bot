@@ -9,8 +9,10 @@ mod commands;
 mod config;
 mod utils;
 mod database;
+mod user_cache;
 
 use config::{ConfigMap, DatabaseContainer, create_config_map, get_prefix};
+use user_cache::{UserLinkCache, create_user_cache};
 use database::Database;
 
 struct Handler;
@@ -74,6 +76,8 @@ async fn main() {
         }
     }
 
+    let user_cache = create_user_cache();
+
     let intents = GatewayIntents::GUILD_MESSAGES 
         | GatewayIntents::MESSAGE_CONTENT
         | GatewayIntents::GUILDS;
@@ -87,6 +91,7 @@ async fn main() {
         let mut data = client.data.write().await;
         data.insert::<ConfigMap>(config_map);
         data.insert::<DatabaseContainer>(Arc::new(db));
+        data.insert::<UserLinkCache>(user_cache);
     }
 
     if let Err(why) = client.start().await {
