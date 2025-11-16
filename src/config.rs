@@ -22,6 +22,12 @@ impl TypeMapKey for ConfigMap {
     type Value = Arc<DashMap<GuildId, ServerConfig>>;
 }
 
+pub struct DatabaseContainer;
+
+impl TypeMapKey for DatabaseContainer {
+    type Value = Arc<crate::database::Database>; 
+}
+
 pub fn create_config_map() -> Arc<DashMap<GuildId, ServerConfig>> {
     Arc::new(DashMap::new())
 }

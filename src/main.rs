@@ -3,12 +3,15 @@ use serenity::prelude::*;
 use serenity::model::gateway::Ready;
 use serenity::model::channel::Message;
 use std::env;
+use std::sync::Arc;
 
 mod commands;
 mod config;
 mod utils;
+mod database;
 
-use config::{ConfigMap, create_config_map, get_prefix};
+use config::{ConfigMap, DatabaseContainer, create_config_map, get_prefix};
+use database::Database;
 
 struct Handler;
 
@@ -51,6 +54,26 @@ async fn main() {
     let token = env::var("DISCORD_TOKEN")
         .expect("Missing DISCORD_TOKEN in environment");
 
+    let database_url = env::var("DATABASE_URL")
+        .unwrap_or_else(|_| "sqlite:bot.db?mode=rwc".to_string());
+
+    let db = Database::new(&database_url)
+        .await
+        .expect("Failed to initialize database");
+
+    let config_map = create_config_map();
+    match db.load_all_configs().await {
+        Ok(configs) => {
+            for (guild_id, config) in configs {
+                config_map.insert(guild_id, config);
+            }
+            println!("Loaded {} guild configs from database", config_map.len());
+        }
+        Err(e) => {
+            eprintln!("Failed to load configs from database: {}", e);
+        }
+    }
+
     let intents = GatewayIntents::GUILD_MESSAGES 
         | GatewayIntents::MESSAGE_CONTENT
         | GatewayIntents::GUILDS;
@@ -62,7 +85,8 @@ async fn main() {
 
     {
         let mut data = client.data.write().await;
-        data.insert::<ConfigMap>(create_config_map());
+        data.insert::<ConfigMap>(config_map);
+        data.insert::<DatabaseContainer>(Arc::new(db));
     }
 
     if let Err(why) = client.start().await {

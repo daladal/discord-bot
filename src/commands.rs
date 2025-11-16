@@ -1,6 +1,6 @@
 use serenity::prelude::*;
 use serenity::model::channel::Message;
-use crate::config::{ConfigMap, ServerConfig};
+use crate::config::{ConfigMap, DatabaseContainer, ServerConfig};
 
 pub async fn handle_command(ctx: &Context, msg: &Message, command: &str, args: Vec<String>) {
     match command {
@@ -41,6 +41,7 @@ async fn prefix(ctx: &Context, msg: &Message, args: Vec<String>) {
 
     let data = ctx.data.read().await;
     let config_map = data.get::<ConfigMap>().expect("ConfigMap not found"); 
+    let db = data.get::<DatabaseContainer>().expect("Database not found");
 
     if args.is_empty() {
         let current_prefix = config_map.get(&guild_id)
@@ -52,9 +53,16 @@ async fn prefix(ctx: &Context, msg: &Message, args: Vec<String>) {
         return;
     }
 
-    config_map.insert(guild_id, ServerConfig {
+    let new_config = ServerConfig {
         prefix: args[0].clone(),
-    });
+    };
+
+    config_map.insert(guild_id, new_config.clone());
+
+    if let Err(e) = db.save_config(guild_id, &new_config).await {
+        eprintln!("Failed to save config to database: {}", e);
+        let _ = msg.channel_id.say(&ctx.http, "Warning: Config saved to memory but failed to save to database!").await;
+    }
 
     let response = format!("Prefix changed to: {}", args[0]);
     let _ = msg.channel_id.say(&ctx.http, response).await;
