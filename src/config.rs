@@ -2,19 +2,7 @@ use serenity::model::id::GuildId;
 use serenity::prelude::TypeMapKey;
 use dashmap::DashMap;
 use std::sync::Arc;
-
-#[derive(Clone)]
-pub struct ServerConfig {
-    pub prefix: String,
-}
-
-impl Default for ServerConfig {
-    fn default() -> Self {
-        ServerConfig {
-            prefix: "!".to_string(),
-        }
-    }
-}
+use crate::database::models::ServerConfig;
 
 pub struct ConfigMap;
 
@@ -25,7 +13,7 @@ impl TypeMapKey for ConfigMap {
 pub struct DatabaseContainer;
 
 impl TypeMapKey for DatabaseContainer {
-    type Value = Arc<crate::database::Database>; 
+    type Value = Arc<crate::database::Database>;
 }
 
 pub fn create_config_map() -> Arc<DashMap<GuildId, ServerConfig>> {
@@ -37,7 +25,7 @@ pub fn get_prefix(config_map: &Arc<DashMap<GuildId, ServerConfig>>, guild_id: Op
         Some(id) => id,
         None => return "!".to_string(),
     };
-
+    
     config_map.get(&guild_id)
         .map(|entry| entry.prefix.clone())
         .unwrap_or_else(|| "!".to_string())

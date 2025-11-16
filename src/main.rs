@@ -10,6 +10,7 @@ mod config;
 mod utils;
 mod database;
 mod user_cache;
+mod riot;
 
 use config::{ConfigMap, DatabaseContainer, create_config_map, get_prefix};
 use user_cache::{UserLinkCache, create_user_cache};

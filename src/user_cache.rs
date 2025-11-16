@@ -2,7 +2,7 @@ use dashmap::DashMap;
 use serenity::model::id::UserId;
 use serenity::prelude::TypeMapKey;
 use std::sync::Arc;
-use crate::database::UserLink;
+use crate::database::models::UserLink;
 
 pub struct UserLinkCache;
 
